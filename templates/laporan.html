@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Laporan Keuangan Fleksibel</h2>
+    <hr>
+    
+    <div class="card p-3 shadow-sm mb-4">
+        <form method="GET" action="/laporan" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">Pilih Cabang</label>
+                <select name="cabang_id" class="form-select">
+                    <option value="semua">Semua Cabang</option>
+                    {% for c in cabang %}
+                    <option value="{{ c.id }}">{{ c.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Tanggal Mulai</label>
+                <input type="date" name="tgl_mulai" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Tanggal Akhir</label>
+                <input type="date" name="tgl_akhir" class="form-control">
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                <button type="submit" name="export" value="excel" class="btn btn-success">Excel</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Data Penjualan</h5>
+            <table class="table">
+                <thead>
+                    <tr><th>Tanggal</th><th>Cabang</th><th>Nominal</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in data_jual %}
+                    <tr>
+                        <td>{{ d.item.nama }}</td>
+                        <td>{{ d.penjualan.cabang.nama }}</td>
+                        <td>Rp {{ "{:,.0f}".format(d.nominal) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h5>Data Pengeluaran</h5>
+            <table class="table">
+                <thead>
+                    <tr><th>Tanggal</th><th>Cabang</th><th>Nominal</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in data_keluar %}
+                    <tr>
+                        <td>{{ d.tanggal }}</td>
+                        <td>{{ d.cabang.nama }}</td>
+                        <td>Rp {{ "{:,.0f}".format(d.nominal) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

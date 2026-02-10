@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-4 text-primary">Input Transaksi Penjualan Multi-Item</h2>
+
+    <form action="/simpan_penjualan" method="POST" id="mainForm">
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card p-3 shadow-sm border-0 d-flex flex-row gap-4 align-items-end" style="border-radius: 15px;">
+                    <div class="flex-grow-1">
+                        <label class="small fw-bold text-muted mb-1">Tanggal Transaksi</label>
+                        <input type="date" name="tanggal" class="form-control shadow-none" id="tglOtomatis" required>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="small fw-bold text-muted mb-1">Pilih Cabang</label>
+                        <select name="id_cabang" class="form-select shadow-none" required>
+                            <option value="">-- Pilih Cabang --</option>
+                            {% for c in cabang %}
+                            <option value="{{ c.id }}">{{ c.nama }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-success fw-bold px-4" onclick="tambahBarisItem()">
+                        <i class="bi bi-plus-circle me-2"></i>Tambah Baris Item
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-8" id="multiItemContainer">
+                </div>
+
+            <div class="col-md-4">
+                <div class="card p-4 shadow-sm border-0 sticky-top" style="top: 20px; border-radius: 15px;">
+                    <h5 class="fw-bold mb-3 text-dark">Ringkasan Input</h5>
+                    <div class="p-3 rounded-3 mb-4" style="background-color: #f1f5f9;">
+                        <span class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Grand Total Keseluruhan:</span>
+                        <h2 class="fw-bold text-primary mb-0" id="grandTotalDisplay">Rp 0</h2>
+                    </div>
+                    
+                    <div class="alert alert-info border-0 small mb-4" style="background-color: rgba(67, 97, 238, 0.05); color: #4361ee;">
+                        <i class="bi bi-info-circle me-2"></i> Setiap item akan tersimpan sebagai rincian database yang terpisah.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm" style="border-radius: 12px;">
+                        <i class="bi bi-cloud-upload me-2"></i>SIMPAN SEMUA DATA
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <hr class="my-5">
+
+    <div class="card shadow-sm border-0 mb-5" style="border-radius: 15px;">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i>Riwayat Transaksi Terakhir</h5>
+        </div>
+        <div class="table-responsive p-3">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr class="small text-muted text-uppercase">
+                        <th>Tanggal</th>
+                        <th>Cabang</th>
+                        <th>Kategori Barang</th>
+                        <th>Metode Bayar</th>
+                        <th class="text-end">Total Nominal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in riwayat_penjualan %}
+                    <tr>
+                        <td class="small">{{ r.tanggal.strftime('%d/%m/%y') }}</td>
+                        <td><span class="badge bg-primary bg-opacity-10 text-primary px-3">{{ r.cabang.nama }}</span></td>
+                        <td>
+                            <ul class="list-unstyled mb-0 small">
+                                {% for item in r.rincian_item %}
+                                <li><i class="bi bi-dot"></i> {{ item.item.nama }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td class="small text-muted">{{ r.rincian_bayar }}</td>
+                        <td class="fw-bold text-end">Rp {{ "{:,.0f}".format(r.total_nominal).replace(',', '.') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted small">Belum ada data transaksi yang tersimpan.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<script>
+let itemCount = 0;
+
+const masterMetode = [
+    {% for m in master_pembayaran %}
+    { id: {{ m.id }}, nama: '{{ m.nama }}' },
+    {% endfor %}
+];
+
+function tambahBarisItem() {
+    const container = document.getElementById('multiItemContainer');
+    const i = itemCount;
+    const div = document.createElement('div');
+    div.className = "card p-4 shadow-sm border-0 mb-4 position-relative card-item";
+    div.style.borderRadius = "15px";
+    
+    div.innerHTML = `
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3 shadow-none" onclick="hapusBaris(this)"></button>
+        <h6 class="fw-bold text-muted mb-3 border-bottom pb-2">
+            <i class="bi bi-box-seam me-2"></i>Item Penjualan #${i + 1}
+        </h6>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label class="small fw-bold text-muted mb-1">Kategori Kategori Penjualan</label>
+                <select name="id_item[]" class="form-select bg-light border-0 shadow-none" required>
+                    <option value="">-- Pilih Kategori --</option>
+                    {% for p in master_penjualan %}
+                    <option value="{{ p.id }}">{{ p.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 mt-2">
+                <label class="small fw-bold text-muted mb-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">
+                    Input Nominal Pembayaran:
+                </label>
+                <div class="row g-2">
+                    ${masterMetode.map(m => `
+                        <div class="col-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text border-0 bg-white text-muted" style="min-width: 70px; font-size: 0.75rem;">${m.nama}</span>
+                                <input type="number" name="nominal_${i}_${m.id}" 
+                                       class="form-control border-0 bg-light shadow-none nominal-kalkulasi" 
+                                       placeholder="0" oninput="hitungGrandTotal()">
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(div);
+    itemCount++;
+}
+
+function hapusBaris(btn) {
+    btn.closest('.card-item').remove();
+    hitungGrandTotal();
+}
+
+function hitungGrandTotal() {
+    let total = 0;
+    document.querySelectorAll('.nominal-kalkulasi').forEach(input => {
+        total += Number(input.value) || 0;
+    });
+    document.getElementById('grandTotalDisplay').innerText = 'Rp ' + total.toLocaleString('id-ID');
+}
+
+window.onload = () => {
+    tambahBarisItem();
+    document.getElementById('tglOtomatis').value = new Date().toISOString().split('T')[0];
+};
+</script>
+
+<style>
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .card-item {
+        transition: transform 0.2s ease;
+    }
+    .card-item:hover {
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}

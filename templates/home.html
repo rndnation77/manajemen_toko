@@ -1,19 +1,125 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Dashboard Ringkasan</h1>
-    <div class="stats-grid">
-        <div class="card">
-            <h3>Total Penjualan</h3>
-            <p>Rp 5.000.000</p>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary">Dashboard Analisis</h2>
+        
+        <form action="/" method="GET" class="d-flex gap-2">
+            <select name="cabang_id" class="form-select shadow-none" onchange="this.form.submit()">
+                <option value="semua">Semua Cabang</option>
+                {% for c in cabang_list %}
+                <option value="{{ c.id }}" {% if cabang_pilih == c.id|string %}selected{% endif %}>{{ c.nama }}</option>
+                {% endfor %}
+            </select>
+            <input type="month" name="bulan" class="form-control shadow-none" value="{{ bulan_pilih }}" onchange="this.form.submit()">
+        </form>
+    </div>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm bg-primary text-white" style="border-radius: 15px;">
+                <small class="opacity-75">Total Penjualan</small>
+                <h3 class="fw-bold mb-0">Rp {{ "{:,.0f}".format(total_jual).replace(',', '.') }}</h3>
+            </div>
         </div>
-        <div class="card">
-            <h3>Pengeluaran</h3>
-            <p>Rp 1.200.000</p>
+        <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm bg-danger text-white" style="border-radius: 15px;">
+                <small class="opacity-75">Total Pengeluaran</small>
+                <h3 class="fw-bold mb-0">Rp {{ "{:,.0f}".format(total_keluar).replace(',', '.') }}</h3>
+            </div>
         </div>
-        <div class="card">
-            <h3>Laba Bersih</h3>
-            <p>Rp 3.800.000</p>
+        <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm bg-success text-white" style="border-radius: 15px;">
+                <small class="opacity-75">Laba Bersih</small>
+                <h3 class="fw-bold mb-0">Rp {{ "{:,.0f}".format(laba_bersih).replace(',', '.') }}</h3>
+            </div>
         </div>
     </div>
+
+    <div class="card p-4 border-0 shadow-sm mb-4" style="border-radius: 15px;">
+        <h5 class="fw-bold mb-3">Tren Penjualan vs Pengeluaran Harian</h5>
+        <canvas id="salesChart" height="100"></canvas>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card p-4 border-0 shadow-sm h-100" style="border-radius: 15px;">
+                <h5 class="fw-bold mb-4">Proporsi Penjualan per Kategori</h5>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card p-4 border-0 shadow-sm h-100" style="border-radius: 15px;">
+                <h5 class="fw-bold mb-4">Rincian Per Kategori</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr class="small text-muted text-uppercase">
+                                <th>Nama Kategori</th>
+                                <th class="text-end">Total Penjualan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nama, total in stats_kategori %}
+                            <tr>
+                                <td class="fw-bold">{{ nama }}</td>
+                                <td class="text-end text-success fw-bold">Rp {{ "{:,.0f}".format(total).replace(',', '.') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center py-4 text-muted">Tidak ada data penjualan kategori bulan ini</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 1. Grafik Harian
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ labels|safe }},
+            datasets: [{
+                label: 'Penjualan',
+                data: {{ data_jual|safe }},
+                borderColor: '#4361ee',
+                backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                tension: 0.3,
+                fill: true
+            }, {
+                label: 'Pengeluaran',
+                data: {{ data_keluar|safe }},
+                borderColor: '#ef4444',
+                tension: 0.3,
+                fill: false
+            }]
+        }
+    });
+
+    // 2. Grafik Donut Kategori
+    const catCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ cat_labels|safe }},
+            datasets: [{
+                data: {{ cat_values|safe }},
+                backgroundColor: ['#4361ee', '#3f37c9', '#4cc9f0', '#4895ef', '#560bad', '#b5179e'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '70%'
+        }
+    });
+</script>
 {% endblock %}
