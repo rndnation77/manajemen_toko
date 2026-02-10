@@ -28,14 +28,8 @@ with app.app_context():
     db.create_all()
 
 # ================= DASHBOARD =================
-# Tambahkan import Penjualan dan Pengeluaran jika sudah ada di models.py
-from models import db, Cabang, JenisPenjualan, JenisPengeluaran, Penjualan, Pengeluaran
-from sqlalchemy import extract
-import calendar
-
 @app.route('/')
 def home():
-    # Ambil parameter filter dari URL
     bulan_pilih = request.args.get('bulan', datetime.now().strftime('%Y-%m'))
     cabang_id = request.args.get('cabang_id', 'semua')
     
@@ -47,15 +41,12 @@ def home():
     num_days = calendar.monthrange(tahun, bulan)[1]
     labels = [str(d) for d in range(1, num_days + 1)]
     
-    # 1. Query Grafik Harian (Total Penjualan vs Pengeluaran)
     q_jual_harian = db.session.query(extract('day', Penjualan.tanggal), db.func.sum(Penjualan.total_nominal)).filter(
         extract('year', Penjualan.tanggal) == tahun, extract('month', Penjualan.tanggal) == bulan
     )
     q_keluar_harian = db.session.query(extract('day', Pengeluaran.tanggal), db.func.sum(Pengeluaran.nominal)).filter(
         extract('year', Pengeluaran.tanggal) == tahun, extract('month', Pengeluaran.tanggal) == bulan
     )
-
-    # 2. Query Rincian Per Kategori (Untuk Tabel & Grafik Donut)
     q_kategori = db.session.query(
         JenisPenjualan.nama, 
         db.func.sum(RincianPenjualan.nominal)
@@ -63,25 +54,21 @@ def home():
      .join(Penjualan, Penjualan.id == RincianPenjualan.penjualan_id)\
      .filter(extract('year', Penjualan.tanggal) == tahun, extract('month', Penjualan.tanggal) == bulan)
 
-    # Terapkan Filter Cabang jika dipilih
     if cabang_id != 'semua':
         cid = int(cabang_id)
         q_jual_harian = q_jual_harian.filter(Penjualan.cabang_id == cid)
         q_keluar_harian = q_keluar_harian.filter(Pengeluaran.cabang_id == cid)
         q_kategori = q_kategori.filter(Penjualan.cabang_id == cid)
 
-    # Eksekusi Query
     jual_harian = q_jual_harian.group_by(extract('day', Penjualan.tanggal)).all()
     keluar_harian = q_keluar_harian.group_by(extract('day', Pengeluaran.tanggal)).all()
     stats_kategori = q_kategori.group_by(JenisPenjualan.nama).all()
 
-    # Siapkan data grafik harian
     data_jual = [0] * num_days
     for d, val in jual_harian: data_jual[int(d)-1] = val
     data_keluar = [0] * num_days
     for d, val in keluar_harian: data_keluar[int(d)-1] = val
 
-    # Siapkan data grafik kategori
     cat_labels = [row[0] for row in stats_kategori]
     cat_values = [row[1] for row in stats_kategori]
 
@@ -149,6 +136,15 @@ def simpan_penjualan():
 
     return redirect(url_for('penjualan'))
 
+# Fitur Baru: Hapus Penjualan
+@app.route('/hapus_penjualan/<int:id>')
+def hapus_penjualan(id):
+    data = Penjualan.query.get(id)
+    if data:
+        db.session.delete(data)
+        db.session.commit()
+    return redirect(url_for('penjualan'))
+
 # ================= PENGELUARAN & PENGATURAN =================
 @app.route('/pengeluaran')
 def pengeluaran():
@@ -168,6 +164,15 @@ def simpan_pengeluaran():
         if items[i] and nominals[i]:
             db.session.add(Pengeluaran(cabang_id=id_cabang, item_id=items[i], nominal=float(nominals[i]), tanggal=tanggal_obj))
     db.session.commit()
+    return redirect(url_for('pengeluaran'))
+
+# Fitur Baru: Hapus Pengeluaran
+@app.route('/hapus_pengeluaran/<int:id>')
+def hapus_pengeluaran(id):
+    data = Pengeluaran.query.get(id)
+    if data:
+        db.session.delete(data)
+        db.session.commit()
     return redirect(url_for('pengeluaran'))
 
 @app.route('/pengaturan', methods=['GET', 'POST'])
@@ -209,7 +214,6 @@ def hapus_master(tipe, id):
     return redirect(url_for('pengaturan'))
 
 # ================= LAPORAN (Multiple Sheets & Pivot) =================
-# ================= LAPORAN (FINAL SESUAI FORMAT) =================
 @app.route('/laporan', methods=['GET'])
 def laporan():
     cabang_id = request.args.get('cabang_id')
@@ -241,86 +245,35 @@ def laporan():
             workbook = writer.book
             money_fmt = workbook.add_format({'num_format': '"Rp "#,##0', 'align': 'right'})
             title_fmt = workbook.add_format({'bold': True, 'font_size': 14})
-            header_fmt = workbook.add_format({'bold': True, 'border': 1, 'align': 'center'})
 
-            # ================= SHEET 1: PENJUALAN =================
             if data_jual:
-                rows = []
-                for d in data_jual:
-                    rows.append({
-                        'Tanggal': d.penjualan.tanggal,
-                        'Kategori': d.item.nama,
-                        'Jumlah': d.nominal
-                    })
-
+                rows = [{'Tanggal': d.penjualan.tanggal, 'Kategori': d.item.nama, 'Jumlah': d.nominal} for d in data_jual]
                 df = pd.DataFrame(rows)
-
-                pivot_kategori = df.pivot_table(
-                    index='Tanggal',
-                    columns='Kategori',
-                    values='Jumlah',
-                    aggfunc='sum',
-                    fill_value=0
-                )
-
-                df_jual_final = pivot_kategori.reset_index()
-                df_jual_final.to_excel(writer, sheet_name='Penjualan', startrow=4, index=False)
-
+                pivot_kategori = df.pivot_table(index='Tanggal', columns='Kategori', values='Jumlah', aggfunc='sum', fill_value=0).reset_index()
+                pivot_kategori.to_excel(writer, sheet_name='Penjualan', startrow=4, index=False)
                 ws = writer.sheets['Penjualan']
                 ws.write('A1', 'LAPORAN PENJUALAN', title_fmt)
                 ws.write('A2', f'Cabang: {nama_cabang}')
-
-                for col in range(1, len(df_jual_final.columns)):
+                for col in range(1, len(pivot_kategori.columns)):
                     ws.set_column(col, col, 18, money_fmt)
-
                 ws.set_column(0, 0, 12)
 
-            # ================= SHEET 2: PENGELUARAN =================
             if data_keluar:
-                rows = []
-                for k in data_keluar:
-                    rows.append({
-                        'Tanggal': k.tanggal,
-                        'Kategori': k.item.nama,
-                        'Jumlah': k.nominal
-                    })
-
-                df2 = pd.DataFrame(rows)
-
-                pivot_kategori2 = df2.pivot_table(
-                    index='Tanggal',
-                    columns='Kategori',
-                    values='Jumlah',
-                    aggfunc='sum',
-                    fill_value=0
-                )
-
-                df_keluar_final = pivot_kategori2.reset_index()
-                df_keluar_final.to_excel(writer, sheet_name='Pengeluaran', startrow=4, index=False)
-
+                rows_k = [{'Tanggal': k.tanggal, 'Kategori': k.item.nama, 'Jumlah': k.nominal} for k in data_keluar]
+                df2 = pd.DataFrame(rows_k)
+                pivot_kategori2 = df2.pivot_table(index='Tanggal', columns='Kategori', values='Jumlah', aggfunc='sum', fill_value=0).reset_index()
+                pivot_kategori2.to_excel(writer, sheet_name='Pengeluaran', startrow=4, index=False)
                 ws2 = writer.sheets['Pengeluaran']
                 ws2.write('A1', 'LAPORAN PENGELUARAN', title_fmt)
                 ws2.write('A2', f'Cabang: {nama_cabang}')
-
-                for col in range(1, len(df_keluar_final.columns)):
+                for col in range(1, len(pivot_kategori2.columns)):
                     ws2.set_column(col, col, 18, money_fmt)
-
                 ws2.set_column(0, 0, 12)
 
         output.seek(0)
-        return send_file(
-            output,
-            download_name=f"Laporan_{nama_cabang}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            as_attachment=True
-        )
+        return send_file(output, download_name=f"Laporan_{nama_cabang}_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
 
-    return render_template(
-        'laporan.html',
-        cabang=Cabang.query.all(),
-        data_jual=data_jual,
-        data_keluar=data_keluar
-    )
-
+    return render_template('laporan.html', cabang=Cabang.query.all(), data_jual=data_jual, data_keluar=data_keluar)
 
 if __name__ == '__main__':
     app.run(debug=True)

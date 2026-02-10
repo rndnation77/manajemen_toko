@@ -60,7 +60,7 @@
                         <th>Cabang</th>
                         <th>Jenis Pengeluaran</th>
                         <th class="text-end">Nominal</th>
-                    </tr>
+                        <th class="text-center">Aksi</th> </tr>
                 </thead>
                 <tbody>
                     {% for r in riwayat_pengeluaran %}
@@ -69,10 +69,17 @@
                         <td><span class="badge bg-warning bg-opacity-10 text-dark px-3">{{ r.cabang.nama }}</span></td>
                         <td>{{ r.item.nama }}</td>
                         <td class="fw-bold text-danger text-end">Rp {{ "{:,.0f}".format(r.nominal).replace(',', '.') }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('hapus_pengeluaran', id=r.id) }}" 
+                               class="btn btn-sm btn-outline-danger border-0" 
+                               onclick="return confirm('Hapus pengeluaran ini?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-muted small">Belum ada data pengeluaran.</td>
+                        <td colspan="5" class="text-center py-4 text-muted small">Belum ada data pengeluaran.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

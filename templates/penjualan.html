@@ -65,7 +65,7 @@
                         <th>Kategori Barang</th>
                         <th>Metode Bayar</th>
                         <th class="text-end">Total Nominal</th>
-                    </tr>
+                        <th class="text-center">Aksi</th> </tr>
                 </thead>
                 <tbody>
                     {% for r in riwayat_penjualan %}
@@ -81,10 +81,17 @@
                         </td>
                         <td class="small text-muted">{{ r.rincian_bayar }}</td>
                         <td class="fw-bold text-end">Rp {{ "{:,.0f}".format(r.total_nominal).replace(',', '.') }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('hapus_penjualan', id=r.id) }}" 
+                               class="btn btn-sm btn-outline-danger border-0" 
+                               onclick="return confirm('Hapus transaksi ini?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted small">Belum ada data transaksi yang tersimpan.</td>
+                        <td colspan="6" class="text-center py-4 text-muted small">Belum ada data transaksi yang tersimpan.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
