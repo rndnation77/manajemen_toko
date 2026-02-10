@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Pengaturan Master Data</h2>
+    <hr>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm sticky-top" style="top: 20px;">
+                <h5>Tambah Kategori Baru</h5>
+                <form method="POST">
+                    <select name="tipe" class="form-control mb-2">
+                        <option value="cabang">Cabang Baru</option>
+                        <option value="penjualan">Nama Item Penjualan</option>
+                        <option value="pengeluaran">Nama Jenis Pengeluaran</option>
+                    </select>
+                    <input type="text" name="nama" class="form-control mb-2" placeholder="Nama..." required>
+                    <button type="submit" class="btn btn-primary w-100">Simpan</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            
+            <h5 class="mt-2"><i class="bi bi-house"></i> Daftar Cabang Aktif</h5>
+            <table class="table table-hover bg-white shadow-sm mb-4">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nama Cabang</th>
+                        <th width="150px">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cabang %}
+                    <tr>
+                        <td>
+                            <form action="{{ url_for('edit_master', tipe='cabang', id=c.id) }}" method="POST" class="d-flex gap-1">
+                                <input type="text" name="nama_baru" value="{{ c.nama }}" class="form-control form-control-sm">
+                                <button type="submit" class="btn btn-sm btn-success">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('hapus_master', tipe='cabang', id=c.id) }}" 
+                               class="btn btn-sm btn-danger w-100" 
+                               onclick="return confirm('Hapus cabang {{ c.nama }}?')">Hapus</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h5><i class="bi bi-cart"></i> Daftar Item Penjualan</h5>
+            <table class="table table-hover bg-white shadow-sm mb-4">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Nama Item</th>
+                        <th width="150px">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in penjualan %}
+                    <tr>
+                        <td>
+                            <form action="{{ url_for('edit_master', tipe='penjualan', id=p.id) }}" method="POST" class="d-flex gap-1">
+                                <input type="text" name="nama_baru" value="{{ p.nama }}" class="form-control form-control-sm">
+                                <button type="submit" class="btn btn-sm btn-success">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('hapus_master', tipe='penjualan', id=p.id) }}" 
+                               class="btn btn-sm btn-danger w-100" 
+                               onclick="return confirm('Hapus item {{ p.nama }}?')">Hapus</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h5><i class="bi bi-wallet"></i> Daftar Jenis Pengeluaran</h5>
+            <table class="table table-hover bg-white shadow-sm">
+                <thead class="table-warning">
+                    <tr>
+                        <th>Nama Pengeluaran</th>
+                        <th width="150px">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in pengeluaran %}
+                    <tr>
+                        <td>
+                            <form action="{{ url_for('edit_master', tipe='pengeluaran', id=e.id) }}" method="POST" class="d-flex gap-1">
+                                <input type="text" name="nama_baru" value="{{ e.nama }}" class="form-control form-control-sm">
+                                <button type="submit" class="btn btn-sm btn-success">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('hapus_master', tipe='pengeluaran', id=e.id) }}" 
+                               class="btn btn-sm btn-danger w-100" 
+                               onclick="return confirm('Hapus pengeluaran {{ e.nama }}?')">Hapus</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

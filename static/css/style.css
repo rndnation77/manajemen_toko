@@ -1,0 +1,209 @@
+:root {
+    --primary-color: #4361ee;
+    --primary-soft: rgba(67, 97, 238, 0.12);
+    --success-color: #2ec4b6;
+    --danger-color: #e71d36;
+    --bg-body: #f8f9fc;
+    --sidebar-dark: #1e1e2d;
+    --text-muted: #6c757d;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #f8f9fc, #f1f5f9);
+    color: #334155;
+    margin: 0;
+}
+
+/* ================= NAVBAR ================= */
+.navbar {
+    background: rgba(255,255,255,0.9) !important;
+    backdrop-filter: blur(10px);
+    padding: 0.9rem 2rem;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.04);
+    border-bottom: 1px solid #edf2f7;
+}
+
+.navbar h2 {
+    color: var(--primary-color);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.navbar ul {
+    list-style: none;
+    display: flex;
+    gap: 28px;
+    margin: 0;
+    align-items: center;
+}
+
+.navbar a {
+    color: #475569;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    position: relative;
+    transition: color 0.25s ease;
+}
+
+.navbar a::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--primary-color);
+    transition: width 0.25s ease;
+}
+
+.navbar a:hover {
+    color: var(--primary-color);
+}
+
+.navbar a:hover::after {
+    width: 100%;
+}
+
+/* ================= CONTAINER & CARDS ================= */
+.container {
+    max-width: 1200px;
+    padding: 40px 20px;
+}
+
+.card {
+    background: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow:
+        0 20px 40px rgba(0,0,0,0.04),
+        0 2px 6px rgba(0,0,0,0.02);
+    padding: 28px;
+    transition: all 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 25px 50px rgba(0,0,0,0.06),
+        0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* ================= FORM ================= */
+.form-control,
+.form-select {
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    background-color: #fff;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px var(--primary-soft);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: #94a3b8;
+}
+
+/* ================= BUTTON ================= */
+.btn-primary {
+    background: linear-gradient(135deg, #4361ee, #3a56d4);
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    padding: 0.65rem 1rem;
+    transition: all 0.25s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(67,97,238,0.25);
+}
+
+/* ================= TABLE ================= */
+.table {
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border-collapse: separate;
+    border-spacing: 0;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+}
+
+.table thead th {
+    background: #f1f5f9;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    padding: 16px;
+    border: none;
+}
+
+.table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.table tbody td {
+    padding: 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Small input inside table */
+.table .form-control-sm {
+    border-radius: var(--radius-sm);
+    border: 1px solid #e5e7eb;
+    background-color: #f8fafc;
+    padding: 0.4rem 0.6rem;
+}
+
+/* ================= ACTION BUTTON ================= */
+.btn-success {
+    background: linear-gradient(135deg, #2ec4b6, #21a99c);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e71d36, #c9182f);
+    border: none;
+}
+
+.btn-sm {
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-weight: 500;
+}
+
+/* ================= TEXT ================= */
+h2, h5 {
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+}
+
+hr {
+    border-top: 1px solid #e2e8f0;
+    opacity: 1;
+    margin: 1.5rem 0;
+}

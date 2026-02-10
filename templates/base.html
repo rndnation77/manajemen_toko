@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Toko</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Toko Saya</h2>
+        <ul>
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/penjualan">Penjualan</a></li>
+            <li><a href="/pengeluaran">Pengeluaran</a></li>
+            <li><a href="/pengaturan">Pengaturan</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
