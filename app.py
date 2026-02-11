@@ -101,33 +101,46 @@ def simpan_penjualan():
     tgl_input = request.form.get('tanggal')
     tanggal_obj = clean_date(tgl_input)
 
+    # 1. Ambil rincian barang (Bisa tambah banyak kolom)
     item_ids = request.form.getlist('id_item[]')
-    semua_metode = JenisPembayaran.query.all()
+    nominal_items = request.form.getlist('nominal_item[]')
     
-    grand_total_transaksi = 0
-    list_rincian_bayar_teks = []
     rincian_obj_list = []
+    total_penjualan_barang = 0
 
     for i in range(len(item_ids)):
-        if item_ids[i]:
-            nominal_per_item = 0
-            for metode in semua_metode:
-                key = f'nominal_{i}_{metode.id}'
-                nom = request.form.get(key, 0)
-                if nom and float(nom) > 0:
-                    nominal_per_item += float(nom)
-                    list_rincian_bayar_teks.append(f"{metode.nama}: {nom}")
+        if item_ids[i] and nominal_items[i]:
+            nom = float(nominal_items[i])
+            rincian = RincianPenjualan(item_id=item_ids[i], nominal=nom)
+            rincian_obj_list.append(rincian)
+            total_penjualan_barang += nom
 
-            if nominal_per_item > 0:
-                rincian = RincianPenjualan(item_id=item_ids[i], nominal=nominal_per_item)
-                rincian_obj_list.append(rincian)
-                grand_total_transaksi += nominal_per_item
+    # 2. Ambil rincian Pembayaran Non-Tunai (TF/QRIS/dll)
+    semua_metode = JenisPembayaran.query.all()
+    total_non_tunai = 0
+    list_rincian_bayar_teks = []
+    
+    for metode in semua_metode:
+        # Kita asumsikan 'Cash' dihitung otomatis, jadi skip input manual untuk Cash jika ada di master
+        if metode.nama.lower() == 'cash':
+            continue
+            
+        val_bayar = request.form.get(f'bayar_{metode.id}', 0)
+        if val_bayar and float(val_bayar) > 0:
+            nom_bayar = float(val_bayar)
+            total_non_tunai += nom_bayar
+            list_rincian_bayar_teks.append(f"{metode.nama}: {nom_bayar:,.0f}")
+
+    # 3. Logika OTOMATIS: Hitung Sisa sebagai Cash
+    total_cash = total_penjualan_barang - total_non_tunai
+    if total_cash > 0:
+        list_rincian_bayar_teks.insert(0, f"Cash: {total_cash:,.0f}")
 
     if rincian_obj_list:
         baru_penjualan = Penjualan(
             cabang_id=id_cabang,
             tanggal=tanggal_obj,
-            total_nominal=grand_total_transaksi,
+            total_nominal=total_penjualan_barang,
             rincian_bayar=", ".join(list_rincian_bayar_teks),
             rincian_item=rincian_obj_list
         )
@@ -145,7 +158,7 @@ def hapus_penjualan(id):
         db.session.commit()
     return redirect(url_for('penjualan'))
 
-# ================= PENGELUARAN & PENGATURAN =================
+# ================= sisanya tetap sama =================
 @app.route('/pengeluaran')
 def pengeluaran():
     return render_template('pengeluaran.html', 
@@ -166,7 +179,6 @@ def simpan_pengeluaran():
     db.session.commit()
     return redirect(url_for('pengeluaran'))
 
-# Fitur Baru: Hapus Pengeluaran
 @app.route('/hapus_pengeluaran/<int:id>')
 def hapus_pengeluaran(id):
     data = Pengeluaran.query.get(id)
@@ -213,7 +225,6 @@ def hapus_master(tipe, id):
         db.session.commit()
     return redirect(url_for('pengaturan'))
 
-# ================= LAPORAN (Multiple Sheets & Pivot) =================
 @app.route('/laporan', methods=['GET'])
 def laporan():
     cabang_id = request.args.get('cabang_id')
@@ -221,7 +232,8 @@ def laporan():
     tgl_akhir = request.args.get('tgl_akhir')
     export = request.args.get('export')
 
-    query_jual = RincianPenjualan.query.join(Penjualan)
+    # Mengambil Header Penjualan
+    query_jual = Penjualan.query 
     query_keluar = Pengeluaran.query
 
     if cabang_id and cabang_id != "semua":
@@ -247,33 +259,54 @@ def laporan():
             title_fmt = workbook.add_format({'bold': True, 'font_size': 14})
 
             if data_jual:
-                rows = [{'Tanggal': d.penjualan.tanggal, 'Kategori': d.item.nama, 'Jumlah': d.nominal} for d in data_jual]
-                df = pd.DataFrame(rows)
-                pivot_kategori = df.pivot_table(index='Tanggal', columns='Kategori', values='Jumlah', aggfunc='sum', fill_value=0).reset_index()
-                pivot_kategori.to_excel(writer, sheet_name='Penjualan', startrow=4, index=False)
+                rows = []
+                for h in data_jual:
+                    # Baris dasar
+                    entry = {'Tanggal': h.tanggal.strftime('%Y-%m-%d')}
+                    
+                    # 1. Tambahkan Kategori Barang sebagai judul kolom langsung
+                    for item in h.rincian_item:
+                        entry[item.item.nama] = item.nominal
+                    
+                    # 2. Tambahkan Metode Pembayaran sebagai judul kolom langsung
+                    if h.rincian_bayar:
+                        parts = h.rincian_bayar.split(', ')
+                        for p in parts:
+                            try:
+                                key, val = p.split(': ')
+                                entry[key] = float(val.replace(',', ''))
+                            except:
+                                continue
+                    rows.append(entry)
+                
+                # Membuat DataFrame dan mengisi data kosong dengan 0
+                df = pd.DataFrame(rows).fillna(0)
+                
+                # Mengurutkan kolom: Tanggal selalu di depan
+                cols = ['Tanggal'] + [c for c in df.columns if c != 'Tanggal']
+                df = df[cols]
+                
+                df.to_excel(writer, sheet_name='Penjualan', startrow=4, index=False)
                 ws = writer.sheets['Penjualan']
                 ws.write('A1', 'LAPORAN PENJUALAN', title_fmt)
                 ws.write('A2', f'Cabang: {nama_cabang}')
-                for col in range(1, len(pivot_kategori.columns)):
-                    ws.set_column(col, col, 18, money_fmt)
-                ws.set_column(0, 0, 12)
+                
+                # Format Rupiah untuk semua kolom angka
+                for col_num, col_name in enumerate(df.columns):
+                    if col_name != 'Tanggal':
+                        ws.set_column(col_num, col_num, 20, money_fmt)
+                    else:
+                        ws.set_column(col_num, col_num, 15)
 
             if data_keluar:
-                rows_k = [{'Tanggal': k.tanggal, 'Kategori': k.item.nama, 'Jumlah': k.nominal} for k in data_keluar]
+                rows_k = [{'Tanggal': k.tanggal, 'Kategori': k.item.nama, 'Nominal': k.nominal} for k in data_keluar]
                 df2 = pd.DataFrame(rows_k)
-                pivot_kategori2 = df2.pivot_table(index='Tanggal', columns='Kategori', values='Jumlah', aggfunc='sum', fill_value=0).reset_index()
-                pivot_kategori2.to_excel(writer, sheet_name='Pengeluaran', startrow=4, index=False)
-                ws2 = writer.sheets['Pengeluaran']
-                ws2.write('A1', 'LAPORAN PENGELUARAN', title_fmt)
-                ws2.write('A2', f'Cabang: {nama_cabang}')
-                for col in range(1, len(pivot_kategori2.columns)):
-                    ws2.set_column(col, col, 18, money_fmt)
-                ws2.set_column(0, 0, 12)
+                df2.to_excel(writer, sheet_name='Pengeluaran', startrow=4, index=False)
 
         output.seek(0)
         return send_file(output, download_name=f"Laporan_{nama_cabang}_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
 
-    return render_template('laporan.html', cabang=Cabang.query.all(), data_jual=data_jual, data_keluar=data_keluar)
+    return render_template('laporan.html', cabang=Cabang.query.all(), data_jual_header=data_jual, data_keluar=data_keluar)
 
 if __name__ == '__main__':
     app.run(debug=True)
