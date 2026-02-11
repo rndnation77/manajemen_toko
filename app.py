@@ -100,8 +100,6 @@ def simpan_penjualan():
     id_cabang = request.form.get('id_cabang')
     tgl_input = request.form.get('tanggal')
     tanggal_obj = clean_date(tgl_input)
-
-    # 1. Ambil rincian barang (Bisa tambah banyak kolom)
     item_ids = request.form.getlist('id_item[]')
     nominal_items = request.form.getlist('nominal_item[]')
     
@@ -114,14 +112,11 @@ def simpan_penjualan():
             rincian = RincianPenjualan(item_id=item_ids[i], nominal=nom)
             rincian_obj_list.append(rincian)
             total_penjualan_barang += nom
-
-    # 2. Ambil rincian Pembayaran Non-Tunai (TF/QRIS/dll)
     semua_metode = JenisPembayaran.query.all()
     total_non_tunai = 0
     list_rincian_bayar_teks = []
     
     for metode in semua_metode:
-        # Kita asumsikan 'Cash' dihitung otomatis, jadi skip input manual untuk Cash jika ada di master
         if metode.nama.lower() == 'cash':
             continue
             
@@ -131,7 +126,6 @@ def simpan_penjualan():
             total_non_tunai += nom_bayar
             list_rincian_bayar_teks.append(f"{metode.nama}: {nom_bayar:,.0f}")
 
-    # 3. Logika OTOMATIS: Hitung Sisa sebagai Cash
     total_cash = total_penjualan_barang - total_non_tunai
     if total_cash > 0:
         list_rincian_bayar_teks.insert(0, f"Cash: {total_cash:,.0f}")
@@ -149,7 +143,6 @@ def simpan_penjualan():
 
     return redirect(url_for('penjualan'))
 
-# Fitur Baru: Hapus Penjualan
 @app.route('/hapus_penjualan/<int:id>')
 def hapus_penjualan(id):
     data = Penjualan.query.get(id)
@@ -158,7 +151,7 @@ def hapus_penjualan(id):
         db.session.commit()
     return redirect(url_for('penjualan'))
 
-# ================= sisanya tetap sama =================
+
 @app.route('/pengeluaran')
 def pengeluaran():
     return render_template('pengeluaran.html', 
@@ -232,7 +225,6 @@ def laporan():
     tgl_akhir = request.args.get('tgl_akhir')
     export = request.args.get('export')
 
-    # Mengambil Header Penjualan
     query_jual = Penjualan.query 
     query_keluar = Pengeluaran.query
 
@@ -264,11 +256,8 @@ def laporan():
                     # Baris dasar
                     entry = {'Tanggal': h.tanggal.strftime('%Y-%m-%d')}
                     
-                    # 1. Tambahkan Kategori Barang sebagai judul kolom langsung
                     for item in h.rincian_item:
                         entry[item.item.nama] = item.nominal
-                    
-                    # 2. Tambahkan Metode Pembayaran sebagai judul kolom langsung
                     if h.rincian_bayar:
                         parts = h.rincian_bayar.split(', ')
                         for p in parts:
@@ -279,19 +268,16 @@ def laporan():
                                 continue
                     rows.append(entry)
                 
-                # Membuat DataFrame dan mengisi data kosong dengan 0
+              
                 df = pd.DataFrame(rows).fillna(0)
-                
-                # Mengurutkan kolom: Tanggal selalu di depan
                 cols = ['Tanggal'] + [c for c in df.columns if c != 'Tanggal']
                 df = df[cols]
-                
                 df.to_excel(writer, sheet_name='Penjualan', startrow=4, index=False)
                 ws = writer.sheets['Penjualan']
                 ws.write('A1', 'LAPORAN PENJUALAN', title_fmt)
                 ws.write('A2', f'Cabang: {nama_cabang}')
                 
-                # Format Rupiah untuk semua kolom angka
+            
                 for col_num, col_name in enumerate(df.columns):
                     if col_name != 'Tanggal':
                         ws.set_column(col_num, col_num, 20, money_fmt)
